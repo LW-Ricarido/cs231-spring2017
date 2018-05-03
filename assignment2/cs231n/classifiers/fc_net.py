@@ -245,7 +245,12 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         pass
-
+        scores = X
+        cache = {}
+        for i in range(self.num_layers):
+            if self.use_dropout and i != self.num_layers - 1:
+                scores,cache[str(i + 1)] = dropout_forward(scores,self.dropout_param)
+            scores = affine_forward(scores,self.params["W" + str(i + 1)],self.params["b" + str(i + 1)])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -269,6 +274,9 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         pass
+        loss, dout = softmax_loss(X,y)
+        for i in range(self.num_layers):
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
