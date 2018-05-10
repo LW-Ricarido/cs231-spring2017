@@ -40,7 +40,7 @@ class TwoLayerNet(object):
         self.reg = reg
 
         ############################################################################
-        # TODO: Initialize the weights and biases of the two-layer net. Weights    #
+        # Initialize the weights and biases of the two-layer net. Weights          #
         # should be initialized from a Gaussian with standard deviation equal to   #
         # weight_scale, and biases should be initialized to zero. All weights and  #
         # biases should be stored in the dictionary self.params, with first layer  #
@@ -79,7 +79,7 @@ class TwoLayerNet(object):
         """
         scores = None
         ############################################################################
-        # TODO: Implement the forward pass for the two-layer net, computing the    #
+        #Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
         pass
@@ -95,7 +95,7 @@ class TwoLayerNet(object):
 
         loss, grads = 0, {}
         ############################################################################
-        # TODO: Implement the backward pass for the two-layer net. Store the loss  #
+        # Implement the backward pass for the two-layer net. Store the loss  #
         # in the loss variable and gradients in the grads dictionary. Compute data #
         # loss using softmax, and make sure that grads[k] holds the gradients for  #
         # self.params[k]. Don't forget to add L2 regularization!                   #
@@ -165,7 +165,7 @@ class FullyConnectedNet(object):
         self.params = {}
 
         ############################################################################
-        # TODO: Initialize the parameters of the network, storing all values in    #
+        #  Initialize the parameters of the network, storing all values in    #
         # the self.params dictionary. Store weights and biases for the first layer #
         # in W1 and b1; for the second layer use W2 and b2, etc. Weights should be #
         # initialized from a normal distribution with standard deviation equal to  #
@@ -181,12 +181,16 @@ class FullyConnectedNet(object):
             if i == 0:
                 self.params["W" + str(i + 1)] = np.random.randn(input_dim,hidden_dims[i]) * weight_scale
                 self.params["b" + str(i + 1)] = np.zeros(hidden_dims[i])
+                # self.params["gamma" + str(i + 1)] = np.ones(input_dim)
+                # self.params['beta'+ str(i + 1)] = np.zeros(input_dim)
             elif i == self.num_layers - 1:
                 self.params["W" + str(i + 1)] = np.random.randn(hidden_dims[i - 1],num_classes) * weight_scale
                 self.params["b" + str(i + 1)] = np.zeros(num_classes)
             else:
                 self.params["W" + str(i + 1)] = np.random.randn(hidden_dims[i - 1], hidden_dims[i]) * weight_scale
                 self.params["b" + str(i + 1)] = np.zeros(hidden_dims[i])
+                # self.params["gamma" + str(i + 1)] = np.ones(hidden_dims[i - 1])
+                # self.params['beta' + str(i + 1)] = np.zeros(hidden_dims[i - 1])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -247,11 +251,17 @@ class FullyConnectedNet(object):
         pass
         scores = X
         dp_cache = {}
+        bn_cache = {}
         af_cache = {}
-        for i in range(self.num_layers):
-            if self.use_dropout and i != self.num_layers - 1:
-                scores,dp_cache[str(i + 1)] = dropout_forward(scores,self.dropout_param)
+        rl_cache = {}
+        for i in range(self.num_layers - 1):
+            # if self.use_batchnorm and i != self.num_layers - 1:
+            #     scores,bn_cache[str(i + 1)] = batchnorm_forward(scores,self.params["gamma" + str(i + 1)],self.params["beta" + str(i + 1)],self.bn_params[i])
+            # if self.use_dropout and i != self.num_layers - 1:
+            #     scores,dp_cache[str(i + 1)] = dropout_forward(scores,self.dropout_param)
             scores,af_cache[str(i + 1)] = affine_forward(scores,self.params["W" + str(i + 1)],self.params["b" + str(i + 1)])
+            scores,rl_cache[str(i + 1)] = relu_forward(scores)
+        scores,af_cache[str(self.num_layers)] = affine_forward(scores,self.params["W" + str(self.num_layers)], self.params["b" + str(self.num_layers)])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -276,12 +286,16 @@ class FullyConnectedNet(object):
         ############################################################################
         pass
         loss, dout = softmax_loss(scores,y)
-        for i in range(self.num_layers):
+        dout, grads["W" + str(self.num_layers)], grads["b" + str(self.num_layers)] = affine_backward(dout, af_cache[str(self.num_layers)])
+        for i in range(self.num_layers - 1):
             loss += 0.5 * self.reg * np.sum(self.params["W" + str(i + 1)] * self.params["W" + str(i + 1)])
-            dout,grads["W" + str(self.num_layers - i)],grads["b" + str(self.num_layers - i)] = affine_backward(dout,af_cache[str(self.num_layers - i)])
-            grads["W" + str(self.num_layers - i)] += self.reg * np.sum(self.params["W" + str(self.num_layers - i)])
-            if self.use_dropout and i != 0:
-                dout = dropout_backward(dout,dp_cache[str(self.num_layers - i)])
+            dout = relu_backward(dout,rl_cache[str(self.num_layers - i - 1)])
+            dout,grads["W" + str(self.num_layers - i - 1)],grads["b" + str(self.num_layers - i - 1)] = affine_backward(dout,af_cache[str(self.num_layers - i - 1)])
+            grads["W" + str(self.num_layers - i - 1)] += self.reg * self.params["W" + str(self.num_layers - i - 1)]
+            # if self.use_dropout and i != 0:
+            #     dout = dropout_backward(dout,dp_cache[str(self.num_layers - i)])
+            # if self.use_batchnorm and i != 0:
+            #     dout, grads["gamma" + str(self.num_layers - i)],grads["beta" + str(self.num_layers - i)] = batchnorm_backward_alt(dout,bn_cache[str(self.num_layers - i)])
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
