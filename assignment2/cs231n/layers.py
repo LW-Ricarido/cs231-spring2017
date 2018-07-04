@@ -599,6 +599,9 @@ def spatial_batchnorm_backward(dout, cache):
     dout = np.transpose(dout,(0,2,3,1)).reshape(N*H*W,C)
     dx,dgamma,dbeta = batchnorm_backward(dout,cache)
     dx = np.reshape(dx,(N,H,W,C)).transpose(0,3,1,2)
+    
+
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
